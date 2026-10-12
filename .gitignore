@@ -1,0 +1,30 @@
+# dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# credentials and machine-specific configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.orca-plugin-state/
+.orca/
+.local/
+runtime-state/
+state/
+secrets/
+credentials/
+
+# local test output, not source code
+docs/final-test-output.txt
