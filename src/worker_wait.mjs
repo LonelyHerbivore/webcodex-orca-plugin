@@ -38,13 +38,13 @@ export async function waitForWorkers({
     }
     polls += 1;
     const allSettled = workers.every(worker => worker.settled);
-    const allSucceeded = workers.every(worker => worker.phase === 'worker_done');
     const needsAttention = workers.some(worker =>
       worker.userTakeover || worker.phase === 'start_unknown');
+    const allSucceeded = !needsAttention && workers.every(worker => worker.phase === 'worker_done');
     const elapsedMilliseconds = Math.max(0, Math.floor(now() - started));
     if (allSettled || needsAttention || now() >= deadline) {
       return {
-        waitOutcome: allSettled ? 'all_settled' : needsAttention ? 'needs_attention' : 'wait_elapsed',
+        waitOutcome: needsAttention ? 'needs_attention' : allSettled ? 'all_settled' : 'wait_elapsed',
         allSettled, allSucceeded, polls, elapsedMilliseconds,
         workers, readOnly: true, newModelTurnStarted: false,
       };
