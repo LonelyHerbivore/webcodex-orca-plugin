@@ -45,8 +45,35 @@ test('invalid IDs and budgets are rejected before any read',async()=>{
   assert.equal(reads,0);
 });
 test('Plugin v1 exposes bounded Worker wait and only issues worker-show',async()=>{
- const response=await interact([boot,call('orca_wait_workers',{dispatchIds:['dispatch_demo'],waitSeconds:0})]);
+ const response=await interact([boot,call('orca_wait_workers',{dispatchId:'dispatch_demo',waitSeconds:0})]);
  assert.equal(response.records[1].result.structuredContent.result.waitOutcome,'all_settled');
  assert.equal(response.records[1].result.structuredContent.result.newModelTurnStarted,false);
  assert.deepEqual(response.commands,[['orchestration','worker-show','--dispatch','dispatch_demo','--json']]);
+});
+
+test('Plugin v1 accepts two distinct scalar Dispatch IDs and issues two read-only queries',async()=>{
+  const r=await interact([boot,call('orca_wait_workers',{dispatchId:'dispatch_a',dispatchId2:'dispatch_b',waitSeconds:0})]);
+  assert.equal(r.records[1].result.structuredContent.result.workers.length,2);
+  assert.deepEqual(r.commands,[
+    ['orchestration','worker-show','--dispatch','dispatch_a','--json'],
+    ['orchestration','worker-show','--dispatch','dispatch_b','--json'],
+  ]);
+});
+test('Plugin v1 rejects duplicate Dispatch IDs without CLI calls',async()=>{
+  const r=await interact([boot,call('orca_wait_workers',{dispatchId:'same',dispatchId2:'same',waitSeconds:0})]);
+  assert.equal(r.records[1].result.structuredContent.code,'invalid_arguments');
+  assert.deepEqual(r.commands,[]);
+});
+test('takeover is attention even after success; cannot imply clean continuation',async()=>{
+  const result=await waitForWorkers({dispatchIds:['dispatch_a'],waitSeconds:0,
+    read:async()=>({...good,terminalResource:{retainedReason:'user_takeover'}})});
+  assert.equal(result.waitOutcome,'needs_attention');
+  assert.equal(result.allSucceeded,false);
+  assert.equal(result.workers[0].userTakeover,true);
+});
+test('failed worker is settled but not successful',async()=>{
+  const result=await waitForWorkers({dispatchIds:['dispatch_a'],waitSeconds:0,
+    read:async()=>({worker:{state:'failed'},dispatch:{status:'failed'}})});
+  assert.equal(result.waitOutcome,'all_settled');
+  assert.equal(result.allSucceeded,false);
 });
