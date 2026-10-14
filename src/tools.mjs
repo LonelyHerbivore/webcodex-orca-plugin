@@ -78,11 +78,13 @@ export const tools = [
     return {...receipt, lifecycle:(receipt.result?.workers||[]).map(row=>({dispatchId:row.dispatchId,...lifecycle(row)}))};
   },readOnly),
   tool('orca_wait_workers','Bounded read-only wait in the current turn; NOT an unattended Host wake. Never launches or retries Workers.',{
-    dispatchIds:{type:'array',items:{type:'string',minLength:1,maxLength:128},minItems:1,maxItems:3,description:'1-3 distinct exact Dispatch IDs'},
+    dispatchId:f.str('First exact Dispatch ID',128),
+    dispatchId2:f.optionalStr('Optional second exact Dispatch ID',128),
+    dispatchId3:f.optionalStr('Optional third exact Dispatch ID',128),
     waitSeconds:f.int('Wait in current tool call, 0-12 seconds; default 10'),
-  },['dispatchIds'],async(a)=>({
+  },['dispatchId'],async(a)=>({
     ok:true,operation:'wait_workers',result:await waitForWorkers({
-      dispatchIds:a.dispatchIds,waitSeconds:a.waitSeconds??10,
+      dispatchIds:[a.dispatchId,a.dispatchId2,a.dispatchId3].filter(x=>x!==undefined),waitSeconds:a.waitSeconds??10,
       read:async dispatchId => (await runOrca(['orchestration','worker-show','--dispatch',dispatchId],{timeoutMs:3000})).result,
     }),
   }),readOnly),
