@@ -7,7 +7,7 @@ test('webcodex v1 initializes and discovers real tool schema',async()=>{
  assert.equal(result.exit,0);
  assert.equal(result.records[0].result.protocolVersion,'webcodex-plugin-v1');
  const ts=result.records[1].result.tools;
- assert.equal(ts.length,21);assert.equal(ts[0].name,'orca_health');
+ assert.equal(ts.length,22);assert.equal(ts[0].name,'orca_health');
  assert.equal(new Set(ts.map(x=>x.name)).size,ts.length);
  assert.equal(ts[0].inputSchema.type,'object');
 });
@@ -16,7 +16,7 @@ test('rejects invalid JSON-RPC method before initialization',async()=>{
  assert.equal(r.records[0].error.message,'Not initialized');
 });
 
-test('all 21 tools stay within WebCodex native v1 schema keyword profile',async()=>{
+test('all 22 tools stay within WebCodex native v1 schema keyword profile',async()=>{
  const r=await interact([boot,{method:'tools/list',params:{}}]);
  const defs=r.records[1].result.tools;
  const allowed=new Set(['type','description','title','enum','const','properties','required','additionalProperties','minLength','maxLength','items','minItems','maxItems']);

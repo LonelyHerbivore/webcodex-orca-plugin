@@ -13,7 +13,7 @@
 - **恢复与诊断**：使用 Orca 官方 Run/Task/Dispatch/Terminal 查询恢复状态，复用有效 Coordinator，避免无证据地新建终端。
 - **对话分页读取**：对读取来源、分页游标和内容完整性进行验证；无法获取完整原始对话时明确标记为不完整。
 
-共提供 **21 个工具**，分为只读查询和有副作用的编排操作。
+当前实验分支提供 **22 个工具**（主分支 v0.3.1 为 21 个），分为只读查询和有副作用的编排操作。
 
 ## 环境要求
 
@@ -57,12 +57,26 @@ timeout_secs = 30
 
 | 分类 | 工具 |
 | --- | --- |
-| 环境与查询 | `orca_health`、`orca_list_workspaces`、`orca_list_workers`、`orca_read_worker`、`orca_read_worker_pages`、`orca_show_worker` |
+| 环境与查询 | `orca_health`、`orca_list_workspaces`、`orca_list_workers`、`orca_wait_workers`、`orca_read_worker`、`orca_read_worker_pages`、`orca_show_worker` |
 | 状态恢复 | `orca_worker_launch_intent`、`orca_request_status`、`orca_coordinator_lookup`、`orca_recovery_snapshot`、`orca_check_messages` |
 | 编排与通信 | `orca_create_run`、`orca_create_coordinator`、`orca_start_worker`、`orca_send_prompt`、`orca_send_message`、`orca_receive_delivery`、`orca_ack_messages`、`orca_reply_message` |
 | 回收与释放 | `orca_stop_worker`、`orca_release_worker` |
 
 对有副作用的操作，不应在超时或连接中断后直接重试；先通过只读恢复工具核实真实状态。
+
+## 实验性：当前回合 Worker 等待（非 Host 主动唤醒）
+
+`orca_wait_workers` 仅在已有 ChatGPT 模型回合执行期间进行限时、只读状态查询，**不会**在本回合结束后自动启动新的 ChatGPT 回合。
+
+输入遵循 Native Plugin v1 的标量字段限制：
+
+```json
+{"dispatchId":"dispatch_a","dispatchId2":"dispatch_b","waitSeconds":10}
+```
+
+最多指定 3 个互不相同的 Dispatch ID（`dispatchId3` 可选），`waitSeconds` 为 0–12 秒。结果区分 `all_settled`、`needs_attention` 和 `wait_elapsed`，返回每个 Worker 状态和 `newModelTurnStarted:false`。查询时限不包含已开始的 CLI 查询收尾耗时。不得将 `all_settled` 直接等同所有 Worker 成功（另看 `allSucceeded`）。
+
+Host 在后台无用户输入时自动唤醒模型仍然是独立的、未通过验收的能力；见 [Host 唤醒边界](docs/HOST_WAKE_BOUNDARY.md)。
 
 ## 测试与已知限制
 
@@ -70,7 +84,7 @@ timeout_secs = 30
 npm test
 ```
 
-2026-10-13 本机验证：**61/61 项自动化测试通过（Node.js 24.13.0）**。测试使用模拟 Orca CLI，不能替代真实多 Agent 端到端验收。真实 Orca 只读回归、Plugin check/reload 记录见 [v0.3.1 测试报告](docs/TEST_REPORT_v0.3.1.md)。
+2026-10-14 本机实验分支验证：**73/73 项自动化测试通过（Node.js 24.13.0）**；v0.3.1 主分支历史记录为 2026-10-13 的 61/61。测试使用模拟 Orca CLI，不能替代真实多 Agent 端到端验收。真实 Orca 只读回归、Plugin check/reload 记录见 [v0.3.1 测试报告](docs/TEST_REPORT_v0.3.1.md)。
 
 以下能力仍有限制：
 

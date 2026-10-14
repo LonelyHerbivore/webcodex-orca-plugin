@@ -4,6 +4,7 @@ import { integrity, readPages } from './transcript.mjs';
 import { once, intentStatus } from './journal.mjs';
 import { lifecycle } from './lifecycle.mjs';
 import { findCoordinator, COORDINATOR_TITLE } from './coordinator.mjs';
+import { waitForWorkers } from './worker_wait.mjs';
 const f = field;
 const r = async (op, args, mutating=false, timeoutMs=20000) => normalizeResult(op, await runOrca(args,{mutating,timeoutMs}));
 const readOnly = {readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false};
@@ -76,6 +77,17 @@ export const tools = [
     const receipt=await r('list_workers',args);
     return {...receipt, lifecycle:(receipt.result?.workers||[]).map(row=>({dispatchId:row.dispatchId,...lifecycle(row)}))};
   },readOnly),
+  tool('orca_wait_workers','Bounded read-only wait in the current turn; NOT an unattended Host wake. Never launches or retries Workers.',{
+    dispatchId:f.str('First exact Dispatch ID',128),
+    dispatchId2:f.optionalStr('Optional second exact Dispatch ID',128),
+    dispatchId3:f.optionalStr('Optional third exact Dispatch ID',128),
+    waitSeconds:f.int('Wait in current tool call, 0-12 seconds; default 10'),
+  },['dispatchId'],async(a)=>({
+    ok:true,operation:'wait_workers',result:await waitForWorkers({
+      dispatchIds:[a.dispatchId,a.dispatchId2,a.dispatchId3].filter(x=>x!==undefined),waitSeconds:a.waitSeconds??10,
+      read:async dispatchId => (await runOrca(['orchestration','worker-show','--dispatch',dispatchId],{timeoutMs:3000})).result,
+    }),
+  }),readOnly),
   tool('orca_read_worker','Read a bounded page of one worker output, preserving continuation cursor.',{
     dispatchId:f.str('Exact Dispatch attempt ID',128),cursor:f.optionalStr('Previous cursor',2048),
     limit:f.int('Rows per page, 1-50'),source:f.variant('Output source',['auto','transcript','terminal']),
