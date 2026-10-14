@@ -29,6 +29,15 @@ export async function waitForWorkers({
     // release anything in this call. Each CLI read has its own short timeout.
     for (const dispatchId of dispatchIds) {
       const raw = await read(dispatchId);
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        throw new OrcaError('invalid_worker_snapshot', 'Orca worker-show did not return an object');
+      }
+      if (raw.dispatchId !== undefined && raw.dispatchId !== dispatchId) {
+        throw new OrcaError('dispatch_mismatch', 'Orca worker-show returned a different Dispatch identity');
+      }
+      if (raw.dispatch?.id !== undefined && raw.dispatch.id !== dispatchId) {
+        throw new OrcaError('dispatch_mismatch', 'Orca worker-show returned a different Dispatch identity');
+      }
       const state = lifecycle(raw);
       workers.push({
         dispatchId, phase: state.phase, settled: state.settled,
