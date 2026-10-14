@@ -77,3 +77,23 @@ test('failed worker is settled but not successful',async()=>{
   assert.equal(result.waitOutcome,'all_settled');
   assert.equal(result.allSucceeded,false);
 });
+
+test('foreign Dispatch result is never accepted as the requested Worker',async()=>{
+  for(const bad of [
+    {dispatchId:'dispatch_other',...good},
+    {dispatch:{id:'dispatch_other',status:'completed'},worker:{state:'succeeded'}},
+  ]) {
+    await assert.rejects(
+      waitForWorkers({dispatchIds:['dispatch_expected'],waitSeconds:0,read:async()=>bad}),
+      error=>error.code==='dispatch_mismatch',
+    );
+  }
+});
+test('malformed Orca response cannot be counted as Worker success',async()=>{
+  for(const bad of [null,[],42]) {
+    await assert.rejects(
+      waitForWorkers({dispatchIds:['dispatch_expected'],waitSeconds:0,read:async()=>bad}),
+      error=>error.code==='invalid_worker_snapshot',
+    );
+  }
+});
